@@ -23,7 +23,7 @@ We define two types of item_name filters:
 
 Both item_name filters are presented as a set of item_name regular expressions (note: only asterisk is supported!).
 
-So, getting to the item_name filtering logic itself, we have four possible situations:
+So, getting to the item_name filtering logic itself, we have three possible situations:
 - both global and local (for the specific host, of course) filters are missing. In this case all items will pass (no filters applied)
 - either global or local filters are given. Then item will pass if its item_name suits at least one of the given masks
 - both local and global filters are present. Same as in previous case, but mask lists are merged
