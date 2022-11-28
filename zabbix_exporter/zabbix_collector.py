@@ -179,8 +179,6 @@ class ZabbixSelectiveCollector(Collector):
                     ok = sum([nm is not None for nm in name_matches]) > 0
                     if not ok:
                         continue
-                    else:
-                        print('***')
 
                 # process metric name
                 metric = attrs.get('name', metric)
