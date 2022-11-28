@@ -1,6 +1,10 @@
 # Created by https://www.toptal.com/developers/gitignore/api/c,python,pycharm+all
 # Edit at https://www.toptal.com/developers/gitignore?templates=c,python,pycharm+all
 
+# developer-specific
+config_examples
+main.py
+
 ### C ###
 # Prerequisites
 *.d

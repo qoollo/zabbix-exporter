@@ -56,10 +56,12 @@ def cli(**settings):
                   status: $2
                 reject:
                   - 'total'
-                hosts:            # list of hosts to load this metric from
-                  - name.of.host.1
-                  - name.of.host.2
-                item_names:       # only items with names fitting one of the given patterns will be exported
+                hosts:                      # list of hosts to load this metric from
+                  - name.of.host.1          # simple host
+                  - name: name.of.host.2    # complex host with additional item_name masks
+                    item_names:
+                      - '*host.specific.item.name*'
+                item_names:                 # only items with names fitting one of the given patterns will be exported
                   - '*item.name.substr.1*'
                   - '*item.name.substr.2*'
               - key: 'metric.with.minimal.settings'

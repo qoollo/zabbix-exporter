@@ -31,11 +31,18 @@ class ZabbixSelectiveCollector(Collector):
         - optional keys: verify_tls:bool, timeout: int
 
         :param metrics - list of dictionaries with keys, each defines: key, name, lables, reject, hosts, item_names
+
+        Hosts may be eiter simple or complex:
+        - simple host: consists only of host name. If global item_names are set, they are applied to it,
+        if not - all data will be loaded
+        - complex host: description includes host name and list of item_names specific for this specific host.
+        Global item_names, if present, are concatenated with these local ones
         """
         self.explicit_metrics = explicit_metrics
         self.enable_timestamps = enable_timestamps
         self.enable_empty_hosts = enable_empty_hosts
         self.metrics = self.__validate_metrics(metrics)
+        self.__simplify_metric_hosts()
 
         self.key_patterns = {prepare_regex(metric['key']): metric
                              for metric in self.metrics}
@@ -94,7 +101,7 @@ class ZabbixSelectiveCollector(Collector):
                 m['lables'] = dict()
 
             if m.get('item_names') in [None, []]:
-                m['item_names'] = None
+                m['item_names'] = list()
             else:
                 m['item_names'] = list(map(prepare_regex, m['item_names']))
 
@@ -107,6 +114,32 @@ class ZabbixSelectiveCollector(Collector):
                 cmd_logger.warning('found empty "hosts" field for one of metrics')
 
         return metrics
+
+    def __simplify_metric_hosts(self):
+        """extracts complex hosts' additional data into separate map and replaces them with string names in metrics"""
+
+        for m in self.metrics:
+            m['host_item_names'] = dict()
+            for i, h in enumerate(m['hosts']):
+                if isinstance(h, str):  # simple host
+                    continue
+                elif isinstance(h, dict):  # complex host
+                    hname = h.get('name')
+                    if hname is None:
+                        msg = f'failed to read complex host: "name" field expected, got: {h}'
+                        cmd_logger.error(msg)
+                        raise Exception(msg)
+
+                    item_names = h.get('item_names')
+                    if item_names not in [None, []]:    # strange: why to use complex host if not to provide additional data?
+                        m['host_item_names'][hname] = list(map(prepare_regex, item_names))
+
+                    m['hosts'][i] = hname
+
+                else:
+                    msg = f'failed to read host: expected either string or dictionary, got {type(h)}'
+                    cmd_logger.error(msg)
+                    raise Exception(msg)
 
     def __load_zabbix_metrics(self):
         total_items = []
@@ -167,18 +200,28 @@ class ZabbixSelectiveCollector(Collector):
             cmd_logger.debug('Dropping unsupported metric %s', item['key_'])
             return
 
+        def item_name_match(attrs, item):
+            host = self.reverse_host_mapping.get(item['hostid'], 'unknown_host')
+            item_name = item['name']
+
+            item_names_global = attrs.get('item_names', [])
+            item_names_local = attrs['host_item_names'].get(host, [])
+            item_names = item_names_global + item_names_local
+            if len(item_names) == 0:  # have no item-name restrictions
+                return True
+
+            name_matches = [re.match(p, item_name) for p in item_names]
+            ok = sum([nm is not None for nm in name_matches]) > 0
+            return ok
+
         metric = item['key_']
         metric_options = {}
         labels_mapping = SortedDict()
         for pattern, attrs in self.key_patterns.items():
             match = re.match(pattern, item['key_'])
             if match:
-                if attrs['item_names'] is not None:
-                    # check item name to fit any of the given patterns
-                    name_matches = [re.match(p, item['name']) for p in attrs['item_names']]
-                    ok = sum([nm is not None for nm in name_matches]) > 0
-                    if not ok:
-                        continue
+                if not item_name_match(attrs, item):
+                    continue
 
                 # process metric name
                 metric = attrs.get('name', metric)
