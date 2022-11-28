@@ -1,7 +1,7 @@
 # Zabbix Exporter
 
 This project is a fork of [original zabbix exporter](https://github.com/MyBook/zabbix-exporter) 
-with advances functionality: 
+with advanced functionality: 
 filtering was added for each zabbix metric with configuration-defined hosts and item names, which significantly 
 improves execution time.
 
