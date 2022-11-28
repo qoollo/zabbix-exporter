@@ -43,20 +43,29 @@ def cli(**settings):
        YAML config example:
 
        \b
-           metrics:
-             - key: 'local.metric[uwsgi,workers,*,*]'
-               name: 'uwsgi_workers'
-               labels:
-                 app: $1
-                 status: $2
-               reject:
-                 - 'total'
-               hosts:
-                 - name.of.host.1
-                 - name.of.host.2
-               item_names:
-                 - '*item.name.substr.1*'
-                 - '*item.name.substr.2*'
+            parsing:
+              explicit_metrics: true
+              enable_timestamps: false
+              enable_empty_hosts: true  # if true, will load metrics with empty or missing 'hosts' field without host restriction
+            metrics:
+              - key: 'local.metric[uwsgi,workers,*,*]'
+                name: 'uwsgi_workers'
+                type: summary
+                labels:
+                  app: $1
+                  status: $2
+                reject:
+                  - 'total'
+                hosts:            # list of hosts to load this metric from
+                  - name.of.host.1
+                  - name.of.host.2
+                item_names:       # only items with names fitting one of the given patterns will be exported
+                  - '*item.name.substr.1*'
+                  - '*item.name.substr.2*'
+              - key: 'metric.with.minimal.settings'
+                name: 'minimal_example'
+                type: summary
+
     """
 
     validate_settings(settings)
