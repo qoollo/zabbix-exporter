@@ -1,5 +1,4 @@
 FROM python:3.6-slim
-MAINTAINER The MyBook Developers <dev@mybook.ru>
 
 RUN groupadd zabbix_exporter && useradd --no-create-home --gid zabbix_exporter zabbix_exporter
 COPY . /tmp/zabbix_exporter
