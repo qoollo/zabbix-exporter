@@ -261,7 +261,8 @@ class ZabbixSelectiveCollector(Collector):
         return {
             'name': sanitize_key(metric),
             'type': metric_options.get('type', 'untyped'),  # untyped by default
-            'documentation': metric_options.get('help', item['name']),
+            'documentation': item['name'],
+            # 'documentation': metric_options.get('help', item['name']),
             'labels_mapping': labels_mapping,
         }
 
