@@ -63,13 +63,13 @@ class ZabbixSelectiveCollector(Collector):
             if not metric:
                 continue
 
-            if metric['name'] not in metric_families:
+            if metric['documentation'] not in metric_families.keys():
                 family = MetricFamily(typ=metric['type'],
                                       name=metric['name'],
                                       documentation=metric['documentation'],
                                       labels=metric['labels_mapping'].keys())
-                metric_families[metric['name']] = family
-            metric_families[metric['name']].add_metric(
+                metric_families[metric['documentation']] = family
+            metric_families[metric['documentation']].add_metric(
                 metric['labels_mapping'].values(), float(item['lastvalue']),
                 int(item['lastclock']) if self.enable_timestamps else None)
             series_count += 1
@@ -141,30 +141,6 @@ class ZabbixSelectiveCollector(Collector):
                     cmd_logger.error(msg)
                     raise Exception(msg)
 
-    def __load_zabbix_metrics(self):
-        total_items = []
-        for metric in self.metrics:
-            valid_hosts = [self.host_mapping.get(hname, None) for hname in metric['hosts']]
-            if None in valid_hosts:
-                cmd_logger.error(f'some of metric hosts not found in host_mapping: metric hosts = {metric["hosts"]}')
-                valid_hosts = [h for h in valid_hosts if h is not None]
-
-            key = metric['key']
-
-            params = dict(
-                output=['name', 'key_', 'hostid', 'lastvalue', 'lastclock', 'value_type'],
-                searchWildcardsEnabled='true',
-                search={'key_': key},
-                sortfield='key_',
-            )
-            if len(valid_hosts) != 0:
-                params['hostids'] = valid_hosts
-
-            items = self.zapi.item.get(**params)
-            total_items.extend(items)
-
-        return total_items
-
     def __get_used_hosts(self):
         """load info to map host names into host ids"""
         host_names = reduce(lambda acc, metric: acc + metric['hosts'], self.metrics, [])
@@ -194,6 +170,30 @@ class ZabbixSelectiveCollector(Collector):
 
         zapi.login(login, password)
         return zapi
+
+    def __load_zabbix_metrics(self):
+        total_items = []
+        for metric in self.metrics:
+            valid_hosts = [self.host_mapping.get(hname, None) for hname in metric['hosts']]
+            if None in valid_hosts:
+                cmd_logger.error(f'some of metric hosts not found in host_mapping: metric hosts = {metric["hosts"]}')
+                valid_hosts = [h for h in valid_hosts if h is not None]
+
+            key = metric['key']
+
+            params = dict(
+                output=['name', 'key_', 'hostid', 'lastvalue', 'lastclock', 'value_type'],
+                searchWildcardsEnabled='true',
+                search={'key_': key},
+                sortfield='key_',
+            )
+            if len(valid_hosts) != 0:
+                params['hostids'] = valid_hosts
+
+            items = self.zapi.item.get(**params)
+            total_items.extend(items)
+
+        return total_items
 
     def __process_metric(self, item):
         if not self.__is_exportable(item):
